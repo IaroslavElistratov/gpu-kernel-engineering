@@ -1,5 +1,7 @@
 # Run the kernels
 
+
+
 Stock FA4 is 100%. Each value below is the median of six same-run ratios;
 every call timed the local kernel and stock FA4 on the same B200.
 Using the same-run ratio reduces cloud timing noise.
@@ -28,6 +30,17 @@ See [Benchmark calibration](https://iaroslavelistratov.github.io/b200-attention/
 | 16 | Split rowsum accumulation | 93.4% | 93.7% | 93.7% |
 | 17 | Phase bitmasks | 93.7% | 94.0% | 94.1% |
 | 18 | TMA L2 promotion | 94.4% | 94.4% | 94.1% |
+
+> Benchmark scope: FA4 and my kernels are benchmarked on their preferred layouts.
+> FA4 contiguous on BSHD, and the local kernels on contiguous BHLD.
+> Layout conversion was excluded from timing for both.
+>
+> Also, the local kernels can be easily adapted to natively work on FA4-style BSHD
+> (without calling .contiguous() on the inputs).
+> I implemented a direct-BSHD version of the final kernel (same modification can be applied
+> to any other kernel in the lineage), performance changes only slightly.
+> See [Input layout and direct BSHD](benchmarks/README.md#input-layout-and-direct-bshd).
+
 
 The included scripts use Modal for B200 access, but any other cloud provider
 with B200s works too. Run the commands below from the repository root:
@@ -60,6 +73,14 @@ kernel is compared with PyTorch BF16 SDPA using fixed tolerances
 modal run benchmarks/benchmark.py \
   --kernel 18 --shape paper4k --arm-order fa4_first
 ```
+
+## Scope
+
+The kernels implement dense, non-causal forward attention for NVIDIA B200
+(`sm_100a`). They use BF16 inputs and outputs, head dimension of 128, KV
+lengths that are multiples of 128 (up to 32K seq_len tested, likely will work fine for even longer),
+and Q lengths compatible with each checkpoint's one- or two-tile Q staging.
+
 
 ### Input layout and direct BSHD
 
